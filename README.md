@@ -11,5 +11,5 @@ oneM2M은 리소스 구조이다
 AE >> Container >> ContentInstance
 - AE(Application Entity)(ex)자동차) 리소스 존재
   - Container(ex) 속도, 엔진온도, 냉각수 온도)
-     - ContentInstance(ex) 각 Container안에 속하는 값)
+     -- ContentInstance(ex) 각 Container안에 속하는 값)
 로 구성되어 있다.
