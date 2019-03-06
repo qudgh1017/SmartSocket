@@ -3,7 +3,7 @@
 <스마트 소켓>
 전력량을 체크하는 센서(스마트 소켓)를 Zigbee통신을 이용하여 Raspberry pi 3와 연동하여 Bada에 센서값 보내주기.
 
-
+두가지 코드는 라즈베리 파이에서 실행되야할 코드
 
 IoT  서버 플랫폼(Bada 안에 Mobius 사용)
 Bada는 oneM2M 기반
