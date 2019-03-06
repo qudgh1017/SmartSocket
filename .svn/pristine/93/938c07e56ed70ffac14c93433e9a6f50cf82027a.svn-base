@@ -1,0 +1,201 @@
+package cotapi;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+
+class CoTConfiguration{
+	static String deviceCfg = "temp.cfg";
+	static String deviceDat = "temp.dat";
+	static String filePath = "";
+    
+	private JSONObject configurationJSON = new JSONObject();
+	private JSONObject dataJSON = new JSONObject();
+	
+	
+	CoTConfiguration(String name){
+		//String s = System.getProperty("user.dir");
+		//System.out.println(s);
+		deviceCfg = name + ".cfg";
+		deviceDat = name + ".dat";		
+	}
+	
+	//GET
+	//-- cfg
+	public String getConfiguration(String key) throws Exception{
+		String value = new String();
+		JSONObject jo = configurationJSON;
+		if(existKey(jo, key)){
+			value = jo.get(key).toString();
+		}
+		else{
+			throw new Exception(">>> Exception(getDeviceConf) No such a key");
+		}
+		return value;
+	}
+	//-- dat
+	public String getData(String key) throws Exception{
+		String value = new String();
+		JSONObject jo = dataJSON;
+		if(existKey(jo, key)){
+			value = jo.get(key).toString();
+		}
+		else{
+			throw new Exception(">>> Exception(getDeviceData) No such a key: " + key);
+		}
+		return value;
+	}
+	
+	public JSONObject getDataJson(){
+		return dataJSON;
+	}
+	
+	//SET
+	//-- cfg
+	public void setConfiguration(String key, String value) throws Exception{
+		JSONObject jo = configurationJSON;		
+
+		jo.put(key, value);
+		writeConfigurationToFile(jo);
+	}
+	
+	public void setConfiguration(String key, int value) throws Exception{
+		JSONObject jo = configurationJSON;		
+
+		jo.put(key, value);
+		System.out.println(">>> setDeviceConf: " + key);
+		writeConfigurationToFile(jo);
+	}
+	
+	public void setConfigurationJSON(String str) throws Exception{
+		configurationJSON = new JSONObject(str);		
+		writeConfigurationToFile(configurationJSON);
+	}
+	
+	//-- dat
+	public void setDataJSON(String str) throws Exception{
+		dataJSON = new JSONObject(str);		
+		writeDataToFile(dataJSON);
+	}
+	
+	public void setData(String key, String value) throws Exception{
+		JSONObject jo = dataJSON;		
+
+		jo.put(key, value);
+		System.out.println(">>> setDeviceData: " + key + ":" + value);
+		writeDataToFile(jo);
+	}
+	
+	public void setData(String key, int value) throws Exception{
+		JSONObject jo = dataJSON;		
+
+		jo.put(key, value);
+		System.out.println(">>> setDeviceData: " + key);
+		writeDataToFile(jo);	
+	}
+	
+
+	//READ FILE
+	//-- cfg
+	public JSONObject readConfigurationFromFile() throws Exception{
+		String jsonStr = new String();
+		String line = null;
+		
+		File f = new File(filePath + deviceCfg);
+		FileReader fr = null;
+		fr = new FileReader(f);
+		BufferedReader reader = new BufferedReader(fr);
+		while( (line = reader.readLine()) != null ){				
+			jsonStr += line;
+		}
+		reader.close();
+		try{
+			JSONObject jo = new JSONObject(jsonStr);
+			configurationJSON = jo;
+			return jo;
+		}catch(JSONException e){
+			throw new JSONException(">>> JSONException");
+		}
+	}
+	//-- dat
+	public JSONObject readDataFromFile() throws Exception{
+		String jsonStr = new String();
+		String line = null;
+		
+		File f = new File(filePath + deviceDat);
+		FileReader fr = null;
+		fr = new FileReader(f);
+		BufferedReader reader = new BufferedReader(fr);
+		while( (line = reader.readLine()) != null ){				
+			jsonStr += line;
+		}
+		reader.close();
+		try{
+			JSONObject jo = new JSONObject(jsonStr);
+			dataJSON = jo;
+			return jo;
+		}catch(JSONException e){
+			throw new JSONException(">>> JSONException");
+		}
+	}
+	
+	//WRITE FILE
+	//-- cfg
+	private void writeConfigurationToFile(JSONObject jo) throws Exception{
+		try{
+			File f = new File(filePath + deviceCfg);
+			FileWriter fw = null;
+			fw = new FileWriter(f);
+			
+			BufferedWriter writer = new BufferedWriter(fw);
+			writer.write(jo.toString(4));
+			System.out.println(jo.toString(4));
+			writer.close();
+		}catch(IOException e){
+			System.out.println(">>> witeDeviceConf Exception: " + e.toString());
+			throw new IOException(">>> witeDeviceConf Exception");
+		}catch(JSONException e){
+			System.out.println(">>> witeDeviceConf JSONException: " + e.toString());
+			throw new JSONException("witeDeviceConf JSONException");
+		}
+	}
+	//-- dat
+	private void writeDataToFile(JSONObject jo) throws Exception{
+		try{
+			File f = new File(filePath + deviceDat);
+			FileWriter fw = null;
+			fw = new FileWriter(f);
+			
+			BufferedWriter writer = new BufferedWriter(fw);
+			writer.write(jo.toString(4));
+			writer.close();
+		}catch(IOException e){
+			System.out.println(">>> witeDeviceConf Exception: " + e.toString());
+			throw new IOException(">>> witeDeviceConf Exception");
+		}catch(JSONException e){
+			System.out.println(">>> witeDeviceConf JSONException: " + e.toString());
+			throw new JSONException("witeDeviceConf JSONException");
+		}
+	}
+	
+	
+	//UTILITY
+	Boolean existKey(JSONObject jo, String key){
+		if(jo.has(key)== true && jo.isNull(key) == false){
+			return true;
+		}else{
+			return false;
+		}	
+	}	
+}//class
+	

@@ -1,0 +1,149 @@
+package cotapi;
+
+import java.io.File;
+import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.logging.ErrorManager;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+
+
+public class CoTSensorAPI {
+	String deviceUID = new String();
+	String gatewayIP = new String();
+	String writePasscode = new String();
+	String deviceID = new String();
+	
+	CoTConfiguration devconf = null;	//device configuration and data
+	CoTConfiguration sensorconf = null; // sensor,control configuration and data
+	CoTConfiguration appdata = null;
+		
+	JSONObject sensorControlCfg = null;
+	
+	public ControlEvent controlEvent; //INTERFACE
+	
+	//CONSTRUCTOR
+	public CoTSensorAPI(){
+		;
+	}
+	public CoTSensorAPI(ControlEvent event){
+		controlEvent = event;		
+	}
+	
+	//READ CONFIGURATION AND REGISTRER SENSOR/CONTROL
+	public void registerSensorControl() throws Exception{
+		try{
+			appdata = new CoTConfiguration("appdata");
+	    	
+			//READ DEVICE CONFIGURATION/DATA FILE
+			// TODO: writePasscode가 없을경우에는 exception떠서 바로 실패하는 구조임. 해결필요
+	    	devconf = new CoTConfiguration("device");
+	    	devconf.readConfigurationFromFile();
+	    	devconf.readDataFromFile();
+	    	this.deviceUID = devconf.getConfiguration("deviceUID");
+	    	this.gatewayIP = devconf.getConfiguration("gatewayIP");
+	    	this.writePasscode = devconf.getConfiguration("writePasscode");
+	    	this.deviceID = devconf.getData("deviceID");
+	    	//READ CONFIGURATION FILE
+	    	sensorconf = new CoTConfiguration("sensor");	//read sensor.cfg
+	    	sensorControlCfg = sensorconf.readConfigurationFromFile();
+	    	//SENSORs REGISTRATION
+			if(sensorControlCfg.has("Sensor")){
+				for(int i=0; i<sensorControlCfg.getJSONArray("Sensor").length(); i++){
+					System.out.println("i:" + i + sensorControlCfg.getJSONArray("Sensor").get(i).toString());
+					JSONObject sensorCfgJson = (JSONObject) sensorControlCfg.getJSONArray("Sensor").get(i);
+					CoTRegistration.registerSensor(devconf, appdata, sensorCfgJson);					
+				}
+				System.out.println("==");
+			}
+			//CONTROLs REGISTRATION
+			if(sensorControlCfg.has("Control")){
+				for(int i=0; i<sensorControlCfg.getJSONArray("Control").length(); i++){
+					//REGISTRER CONTROL
+					System.out.println("i:" + i + sensorControlCfg.getJSONArray("Control").get(i).toString());
+					JSONObject controlCfgJson = (JSONObject) sensorControlCfg.getJSONArray("Control").get(i);
+					CoTRegistration.registerControl(devconf, appdata, controlCfgJson);						
+					//PARSE MQTT INFORMATION
+					JSONObject mqttInfoJson = new JSONObject();
+					mqttInfoJson = parseMqttInfo(controlCfgJson);
+					System.out.println(mqttInfoJson.toString());
+					//SUBSCRIBE MQTT
+					CoTMqttClient mqtt = new CoTMqttClient(mqttInfoJson.getString("mqttHost"), mqttInfoJson.getString("mqttClientID")); //203.254.173.5:1883,
+					mqtt.subscribeToTopic(mqttInfoJson.getString("mqttTopic"));
+					if(controlEvent == null){
+						System.out.println(">>> Control-callback(ControlEvent) is NULL");
+					}else{
+						mqtt.registerControlEvent(controlEvent);
+					}
+				}
+			}			
+    	}catch(Exception e0){
+    		System.out.println(">>> Exception(readConfiguration), configuration. Exit.." + e0.toString());
+    		System.exit(0);
+    	}
+    }
+    
+	private JSONObject parseMqttInfo(JSONObject controlCfgJson) throws Exception{		
+		String controlDeliveryMethod = new String();
+		if(controlCfgJson.has("controlDeliveryMethod")){ 
+			controlDeliveryMethod = controlCfgJson.getString("controlDeliveryMethod");
+		}
+		//PARSING
+		//		ex) MQTT://203.254.173.167?topic=kr.keti.cotlab.sht11.0001.waterpump&client=hiserver
+		String method = controlDeliveryMethod.split("://")[0]; 
+		String mqttHostTopicClient = controlDeliveryMethod.split("://")[1];  //203.254.173.167?topic=kr.keti.cotlab.sht11.0001.waterpump&client=hiserver
+		String mqttHost = mqttHostTopicClient.split("\\?")[0];
+		String mqttTopicClient = mqttHostTopicClient.split("\\?")[1]; //topic=kr.keti.cotlab.sht11.0001.waterpump&client=hiserver
+		String mqttTopic = mqttTopicClient.split("topic=")[1];	//kr.keti.cotlab.sht11.0001.waterpump&client=hiserver
+		mqttTopic = mqttTopic.split("\\&")[0];	//kr.keti.cotlab.sht11.0001.waterpump
+		String mqttClientID = mqttTopicClient.split("\\&client=")[1];   //hiserver
+		
+		JSONObject cJson = new JSONObject();
+		cJson.put("mqttHost", mqttHost);
+		cJson.put("mqttClientID", mqttClientID);
+		cJson.put("mqttTopic", mqttTopic);
+		return cJson; //ex) {"mqttHost":"", "mqttClientID":"", "mqttTopic":""}		
+	}
+		
+	public String getSensorID(int number) throws Exception{		
+		return CoTRegistration.getSensorID(number, appdata);
+	}
+	//CONTROLDATA METHODS
+	public void sendControl(JSONObject txJSON) throws Exception{
+		CoTControl.createControlData(devconf.getConfiguration("gatewayIP"), txJSON);
+	}
+	public void updateControlData(String replyAddress, String controlDataID, String controlDeliveryResult, String controlExecutionResult) throws Exception{
+		JSONObject txJSON = new JSONObject();
+		txJSON.put("controlDeliveryResult", controlDeliveryResult);
+		txJSON.put("controlExecutionResult", controlExecutionResult);
+		txJSON.put("writePasscode", devconf.getConfiguration("writePasscode"));
+		CoTControl.updateControlData(replyAddress, controlDataID, txJSON);
+	}
+	//BUILD JSON FOR SENSOR DATA
+	public void putSensorData(String ID, String writePasscode, String data, String timestamp) throws JSONException{
+		JSONObject j = new JSONObject();
+		j = CoTSensorDataJSON.putSensorData(ID, writePasscode, data, timestamp);
+		//System.out.println(j);
+	}
+	public void appendSensorData(String ID, String writePasscode, String data, String timestamp) throws JSONException{
+		JSONObject j = new JSONObject();
+		j = CoTSensorDataJSON.appendSensorData(ID, writePasscode, data, timestamp);
+		//System.out.println(j);
+	}
+	public void initSensorData() throws JSONException{
+		JSONObject j = new JSONObject();
+		j = CoTSensorDataJSON.initSensorData();
+		//System.out.println(j);
+	}
+	//UPLOAD SENSOR DATA
+	public void uploadSensors() throws Exception{
+		CoTSensor.uploadSensors(devconf.getConfiguration("gatewayIP"), CoTSensorDataJSON.getSensorDataJSON());
+	}
+}
+
+
+
+

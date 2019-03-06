@@ -1,0 +1,161 @@
+package sensor;
+
+import java.io.IOException;
+import java.util.Date;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import com.pi4j.io.gpio.GpioController;
+import com.pi4j.io.gpio.GpioFactory;
+import com.pi4j.io.gpio.GpioPinDigitalInput;
+import com.pi4j.io.gpio.GpioPinDigitalOutput;
+import com.pi4j.io.gpio.PinMode;
+import com.pi4j.io.gpio.PinPullResistance;
+import com.pi4j.io.gpio.RaspiPin;
+import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent;
+import com.pi4j.io.gpio.event.GpioPinListenerDigital;
+import com.pi4j.io.i2c.I2CBus;
+import com.pi4j.io.serial.Serial;
+import com.pi4j.io.serial.SerialDataEvent;
+import com.pi4j.io.serial.SerialDataListener;
+import com.pi4j.io.serial.SerialFactory;
+import com.pi4j.io.serial.SerialPortException;
+
+import cotapi.CoTSensorAPI;
+
+
+
+
+
+public class SmartSocket {
+	String deviceUID = new String();
+	String gatewayIP = new String();
+	String deviceID = new String();
+	
+	static CoTSensorAPI sapi = null;
+	
+	static String rxdata = new String();
+	
+	static GpioPinDigitalOutput gLed1; 
+    static GpioPinDigitalOutput rLed1;
+    static GpioPinDigitalOutput gLed2;
+    static GpioPinDigitalOutput rLed2;
+    static GpioPinDigitalInput pirPin;
+	
+    public static void main(String args[]) throws Exception {
+    	sapi = new CoTSensorAPI();
+    	sapi.registerSensorControl();
+    	
+        GpioController gpio = GpioFactory.getInstance();
+        gLed1 = gpio.provisionDigitalMultipurposePin(RaspiPin.GPIO_25, PinMode.DIGITAL_OUTPUT);   //O gnd    O gpio25 
+        rLed1 = gpio.provisionDigitalMultipurposePin(RaspiPin.GPIO_29, PinMode.DIGITAL_OUTPUT);   //O gpio29 O gpio28
+        gLed2 = gpio.provisionDigitalMultipurposePin(RaspiPin.GPIO_24, PinMode.DIGITAL_OUTPUT);   //O gpio29 O gpio28
+        rLed2 = gpio.provisionDigitalMultipurposePin(RaspiPin.GPIO_28, PinMode.DIGITAL_OUTPUT);   //O gpio29 O gpio28
+        pirPin = gpio.provisionDigitalInputPin(RaspiPin.GPIO_15, PinPullResistance.PULL_DOWN);
+        gLed1.low();    	
+    	rLed1.low();
+    	rLed2.high();
+                
+        System.out.println(" Serial: 38400, N, 8, 1.");
+        //INIT SERIAL
+        final Serial serial = SerialFactory.createInstance();
+        serial.addListener(new SerialDataListener() {
+            @Override
+            public void dataReceived(SerialDataEvent event) {
+            	System.out.printf("%s ", event.getData());  //"SS_NO:  1001,    233783,       192,    01, \n\r"
+            	rxdata += event.getData();
+            }            
+        });
+        //INIT        
+        try {
+            serial.open("/dev/ttyUSB0", 38400);
+        }
+        catch(SerialPortException ex) {
+            System.out.println(" ==>> SERIAL SETUP FAILED : " + ex.getMessage());
+            return;
+        }
+        ScheduledJob job = new ScheduledJob();
+        Timer jobScheduler = new Timer();
+        jobScheduler.scheduleAtFixedRate(job, 0, 5000); //delay-period
+    	while(true) {
+    		;
+            Thread.sleep(1000);
+        }
+    }//main
+}
+
+
+
+class ScheduledJob extends TimerTask {
+	int btnCount=0;
+    
+    ScheduledJob(){
+	   ;
+   }
+    
+   public void run() {
+	   	String[] st = null;
+	   	String[] values = null;
+	   	String ssid = null;
+	   	String ip = null;
+	   	boolean dataReady = false;
+	   	
+	   	SmartSocket.rxdata = SmartSocket.rxdata.replaceAll("\\s+", ""); //공백, 특수문자 제거
+	   	st = SmartSocket.rxdata.split("SS_NO:");
+	   	SmartSocket.rxdata = "";
+	   	
+	   	long timestamp = System.currentTimeMillis();
+			
+	   	for(int i=0; i<st.length; i++){
+	   		if(st[i].split(",").length ==4){	//1004, 1055, 39, 01
+	   			values = st[i].split(",");
+	   			if(Integer.parseInt(values[0]) >= 1000){  //id가 1000보다 큼
+	   				ip = String.valueOf( Integer.parseInt(values[2])/100 ); //순시전력
+	   				try {
+	   					ssid = SmartSocket.sapi.getSensorID(Integer.parseInt(values[0]) - 1000 + 1);
+	   					SmartSocket.sapi.appendSensorData(ssid, "wr123", ip, String.valueOf(timestamp) );
+						dataReady = true;
+					} catch (Exception e) {
+						System.out.println(">>> Exception(make sensordata)" + e.toString());
+						e.printStackTrace();
+					}            				
+	   			}
+	   		}
+	   	}
+	   	
+	   	if(dataReady == true){
+	   		dataReady = false;
+	       	try {
+	       		SmartSocket.sapi.uploadSensors();
+	       		SmartSocket.sapi.initSensorData();
+			} catch (Exception e) {
+				System.out.println(">>> Exception, upload sensor" + e.toString());
+			}
+	   	}
+	}
+}
+  	
+

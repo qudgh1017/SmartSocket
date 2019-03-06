@@ -1,0 +1,163 @@
+package cotapi;
+
+
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+
+
+
+public class CoTHTTP {
+	private StringBuffer httpResponseMessage = null;		
+	private int httpResponseCode = 0;	
+
+	
+	public CoTHTTPResponse sendHttpPost(String urlPath, String body)throws Exception{
+		httpResponseMessage = new StringBuffer();
+		HttpURLConnection con = null;
+		
+		try{
+			con = this.writeHttp("POST",urlPath, body);
+			readHttpResponse(con);
+			return new CoTHTTPResponse(httpResponseCode, httpResponseMessage);
+		}catch (Exception e){
+			this.setHttpResponseMessage(new StringBuffer(""));
+			this.setHttpResponseCode(0);
+			System.out.println(">>> Exception:" + e.toString());
+			throw new Exception(">>> Exception:" + e.toString());
+		}
+	}
+	
+	public CoTHTTPResponse sendHttpPut(String urlPath, String body) throws Exception{
+		httpResponseMessage = new StringBuffer();
+		HttpURLConnection con = null;
+		
+		try{
+			con = this.writeHttp("PUT",urlPath, body);
+			readHttpResponse(con);
+			return new CoTHTTPResponse(httpResponseCode, httpResponseMessage);
+		}catch (Exception e){
+			this.setHttpResponseMessage(new StringBuffer(""));
+			this.setHttpResponseCode(0);
+			System.out.println(">>> Exception:" + e.toString());
+			throw new Exception(">>> Exception:" + e.toString());
+		}
+	}
+	
+	public CoTHTTPResponse sendHttpGet(String urlPath) throws Exception{
+		httpResponseMessage = new StringBuffer();
+		int responseCode = 0;
+		InputStreamReader isr;
+		
+		try {
+			//get HTTP connection
+			HttpURLConnection con = getHTTPConnection(urlPath);
+			if (con == null){
+				System.out.println(">>> Http Conntection Failed");
+			}
+			con.setRequestMethod("GET");
+			con.setRequestProperty("Content-Type", "application/json");
+			con.setDoOutput(true);
+			readHttpResponse(con);
+			return new CoTHTTPResponse(httpResponseCode, httpResponseMessage);
+		} catch(Exception e) {
+			this.setHttpResponseMessage(new StringBuffer(""));
+			this.setHttpResponseCode(0);
+			System.out.println(">>> Exception:" + e.toString());
+			throw new Exception(">>> Exception:" + e.toString());
+		}
+	}
+	
+	public void sendHttpDel(String urlPath) throws Exception{
+		//TODO
+	}
+	
+	
+		
+	private HttpURLConnection writeHttp(String method, String urlPath, String body) throws Exception {
+		HttpURLConnection con = null;
+		con = getHTTPConnection(urlPath);
+		if (con == null){
+			System.out.println(">>> Http Conntection Failed");
+		}
+		con.setConnectTimeout(5000);
+		con.setReadTimeout(5000);
+		con.setRequestMethod(method); //"POST", "PUT"
+		con.setRequestProperty("Content-Type", "application/json"); //Header??
+		con.setDoOutput(true);
+		con.setDoInput(true);
+		DataOutputStream wr = new DataOutputStream(con.getOutputStream());
+		wr.writeBytes(body);
+		//con.getOutputStream().write(body.getBytes());
+		wr.flush();
+		wr.close();
+		return con;
+	}
+	
+	private void readHttpResponse(HttpURLConnection con) throws Exception {
+		int responseCode = 0;
+		InputStreamReader isr;
+		
+		responseCode = con.getResponseCode();
+		this.setHttpResponseCode(responseCode);
+		if(responseCode == HttpURLConnection.HTTP_OK){
+			isr = new InputStreamReader(con.getInputStream());
+		}else{
+			java.io.InputStream is = con.getErrorStream();
+			if(is == null){
+				this.setHttpResponseMessage(new StringBuffer(""));
+				this.setHttpResponseCode(0);				
+				//System.out.println("httpErrorStream is null");
+				throw new Exception("httpErrorStream is null");
+			}
+			isr = new InputStreamReader(is);
+		}
+		BufferedReader in = new BufferedReader(isr);
+		String inputLine;
+		while ((inputLine = in.readLine()) != null) {
+			httpResponseMessage.append(inputLine);
+		}
+		in.close();
+		con.disconnect();
+		this.setHttpResponseMessage(httpResponseMessage);
+	}
+	
+	private HttpURLConnection getHTTPConnection(String urlPath){
+		HttpURLConnection con = null;
+		try {
+			URL url = new URL(urlPath);
+			con = (HttpURLConnection) url.openConnection();
+			con.setDoOutput(true);
+		} catch (MalformedURLException e) {			
+			e.printStackTrace();
+			System.out.println("Exception @getHTTPConnection:" + e.getMessage());
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.out.println("Exception @getHTTPConnection:" + e.getMessage());
+		}
+		return con;
+	}	
+	
+	private void setHttpResponseCode(int setCode){
+		this.httpResponseCode = setCode;
+	}
+	
+	public int getHttpResponseCode(){
+		return this.httpResponseCode;
+	}
+	
+	private void setHttpResponseMessage(StringBuffer setMessage){
+		this.httpResponseMessage = setMessage;
+	}
+	
+	public StringBuffer getHttpResponseMessage(){
+		return this.httpResponseMessage;		
+	}
+	
+}//class

@@ -1,0 +1,39 @@
+package cotapi;
+
+import java.net.HttpURLConnection;
+
+import org.json.JSONObject;
+
+public class CoTSensor {
+	public static void uploadSensors(String gatewayIP, JSONObject sensorDataJson) throws Exception{
+		CoTHTTPResponse ctrlresp = new CoTHTTPResponse();
+		ctrlresp = requestHttpMethod(gatewayIP, "post", "/sensordata", sensorDataJson.toString());
+		if(ctrlresp.responseCode == HttpURLConnection.HTTP_OK){
+			;
+		}else{
+			throw new Exception(">>> upload sensorData Error:" + ctrlresp.responseMessage);
+		}
+	}
+	
+	//=====================
+	
+	private static CoTHTTPResponse requestHttpMethod(String gatewayIP, String request, String subUrlPath, String httpBody) throws Exception{
+		//DATA PREPARATION
+		String url = gatewayIP + subUrlPath; //ex) "http://203.254.173.158:8080/CoT" + "/control" 
+		//PRINT REQUEST
+		System.out.println(">>> Request : " + url);
+		System.out.println(">>> Request :" + httpBody);
+		//HTTP
+		CoTHTTP cothttp = new CoTHTTP();
+		CoTHTTPResponse cotresp = new CoTHTTPResponse();	
+		if (request.toUpperCase().equals("POST")){
+			cotresp = cothttp.sendHttpPost(url, httpBody);
+		}else if(request.toUpperCase().equals("PUT")){
+			cotresp = cothttp.sendHttpPut(url, httpBody);
+		}
+		//PRINT
+		System.out.println(">>> Response Code: " + String.valueOf(cotresp.responseCode));
+		System.out.println(">>> Response Message: " + cotresp.responseMessage);
+		return cotresp;
+	}		
+}

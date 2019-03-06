@@ -1,0 +1,19 @@
+package cotapi;
+
+public class CoTHTTPResponse {
+	String responseMessage;
+	int responseCode;
+	
+	public CoTHTTPResponse(int httpResponseCode, StringBuffer httpResponseMessage){
+		this.responseCode = httpResponseCode;
+		this.responseMessage = httpResponseMessage.toString();
+	}
+
+	public CoTHTTPResponse() {
+		this.responseCode = 0;
+		this.responseMessage = "";
+	}
+	
+
+}
+

@@ -1,0 +1,138 @@
+package cotapi;
+
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.net.HttpURLConnection;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+
+public class CoTRegistration {
+	
+	public static void registerSensor(CoTConfiguration devconf, CoTConfiguration appdata, JSONObject sensorCfgJson) throws Exception{
+		CoTHTTPResponse cotresp = new CoTHTTPResponse();
+		JSONObject txJSON = null;
+		
+		txJSON = CoTRegistrationJSON.makeJsonForSensorRegistration(devconf, sensorCfgJson);
+		cotresp = requestRegistration(devconf, "/sensor", txJSON.toString());
+		updateRegInfoToFile(cotresp, sensorCfgJson, appdata);
+	}
+	
+	public static void registerControl(CoTConfiguration devconf, CoTConfiguration appdata, JSONObject controlCfgJson) throws Exception{
+		CoTHTTPResponse cotresp = new CoTHTTPResponse();
+		JSONObject txJSON = null;
+		
+		txJSON = CoTRegistrationJSON.makeJsonForControlRegistration(devconf, controlCfgJson);
+		cotresp = requestRegistration(devconf, "/control", txJSON.toString());
+		updateRegInfoToFile(cotresp, controlCfgJson, appdata);
+	}
+	
+	public static String getSensorID(int number, CoTConfiguration appdata) throws Exception{
+		String sensorID = new String();
+		JSONObject regInfoJson = new JSONObject();		
+		//FILE READ
+		try{
+			appdata.readDataFromFile();
+			regInfoJson = appdata.getDataJson();
+		}catch(Exception e){
+			throw new Exception(">>> Exception: File read error(sensor.cfg)");
+		}
+		//GET SENSORID
+		for(int i=0; i<regInfoJson.getJSONArray("regInfo").length(); i++){
+			if(((JSONObject)regInfoJson.getJSONArray("regInfo").get(i)).get("number").toString().equals(String.valueOf(number))){
+				sensorID = ((JSONObject)regInfoJson.getJSONArray("regInfo").get(i)).get("id").toString();
+			}
+		}
+				//System.out.println(">>>number:" + number + ", sensorID:" + sensorID);
+		return sensorID;
+	}
+	
+	//=====================
+	
+	
+	private static CoTHTTPResponse requestRegistration(CoTConfiguration devconf, String subUrlPath, String httpBody) throws Exception{
+		//DATA PREPARATION
+		String url = devconf.getConfiguration("gatewayIP") + subUrlPath; //ex) "http://203.254.173.158:8080/CoT" + "/control" 
+		//PRINT REQUEST
+		System.out.println(">>> Request : " + url);
+		System.out.println(">>> Request :" + httpBody);
+		//HTTP
+		CoTHTTP cothttp = new CoTHTTP();
+		CoTHTTPResponse cotresp = new CoTHTTPResponse();		
+		cotresp = cothttp.sendHttpPost(url, httpBody);
+		//PRINT
+		System.out.println(">>> Response Code: " + String.valueOf(cotresp.responseCode));
+		System.out.println(">>> Response Message: " + cotresp.responseMessage);
+		return cotresp;
+	}
+	
+	private static void updateRegInfoToFile(CoTHTTPResponse cotresp, JSONObject sensorJson, CoTConfiguration appdata) throws Exception{
+		try{
+			appdata.readDataFromFile();			
+		}catch(FileNotFoundException e){
+			appdata.setDataJSON("{\"regInfo\":[]}");		//make empty data file
+		}catch(JSONException e2){
+			throw e2;
+		}
+				
+		if(cotresp.responseCode == HttpURLConnection.HTTP_OK){
+			writeToSensorDatFile(cotresp, sensorJson, appdata);
+		//IF ALREADY EXIST	
+		}else if(cotresp.responseCode == 690){
+			System.out.println(">>> ResponseCode: 690, Already Exist");
+			writeToSensorDatFile(cotresp, sensorJson, appdata);
+		//IF Error
+		}else{
+			throw new Exception(">>> Registration Error:" + cotresp.responseMessage);			
+		}
+	}
+	
+	private static void writeToSensorDatFile(CoTHTTPResponse cotresp, JSONObject sensorJson, CoTConfiguration appdata) throws Exception{
+		JSONObject rxjson = new JSONObject(cotresp.responseMessage);
+		JSONObject regInfoJson = appdata.getDataJson();
+		
+		JSONObject simpleRegInfoJson = new JSONObject();
+		if(rxjson.has("sensorID")) {
+			simpleRegInfoJson.put("number", sensorJson.get("number"));
+			simpleRegInfoJson.put("name", sensorJson.get("name"));
+			if(existKey(rxjson, "sensorID")){
+				simpleRegInfoJson.put("id", rxjson.get("sensorID"));
+				simpleRegInfoJson.put("type", "Sensor");					
+			}else if(existKey(rxjson, "controlID")){
+				simpleRegInfoJson.put("id", rxjson.get("controlID"));
+				simpleRegInfoJson.put("type", "Control");					
+			}
+			
+			if(regInfoJson.has("regInfo")){
+				int i = 0;
+				boolean foundMatch = false;
+				//IF EXIST THEN REPLACE
+				for(i=0; i<regInfoJson.getJSONArray("regInfo").length(); i++){
+					if(((JSONObject)regInfoJson.getJSONArray("regInfo").get(i)).get("number").toString().equals( sensorJson.get("number") )){
+						foundMatch = true;
+						regInfoJson.getJSONArray("regInfo").put(i, (JSONObject)simpleRegInfoJson); //replace
+					}
+				}
+				//IF NOT EXIST THEN APPEND
+				if(foundMatch == true){
+					foundMatch = false;
+				}else{
+					System.out.println(">>>c: append");
+					regInfoJson.append("regInfo", simpleRegInfoJson); //{"regInfo":[{...}]}
+				}
+			}
+			appdata.setDataJSON(regInfoJson.toString());
+		}
+	}
+	
+	private static Boolean existKey(JSONObject jo, String key){
+		if(jo.has(key)== true && jo.isNull(key) == false){
+			return true;
+		}else{
+			return false;
+		}	
+	}
+}

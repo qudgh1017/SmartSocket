@@ -1,0 +1,155 @@
+package cotapi;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+public class CoTRegistrationJSON {
+
+	public static JSONObject makeJsonForSensorRegistration(CoTConfiguration devconf, JSONObject sensorCfgJson) throws JSONException{
+		JSONObject jObj = new JSONObject();
+		String str = new String();
+		
+			//From device cfg or device dat
+			try{
+				str = devconf.getConfiguration("writePasscode");
+				jObj.put("writePasscode", str);
+			}catch(JSONException e){System.out.println(">>> JSONError(makeJSON)" + e.toString()); throw new JSONException(">>> JSONError");
+			}catch(Exception e){ System.out.println(">>> no writePasscode key" + e.toString());}
+		
+			try{
+				str = devconf.getData("deviceID");
+				jObj.put("deviceID", str);
+			}catch(JSONException e){System.out.println(">>> JSONError(makeJSON)" + e.toString()); throw new JSONException(">>> JSONError");
+			}catch(Exception e){ System.out.println(">>> no deviceID key" + e.toString());}
+			
+			
+			//From sensorcontrol cfg
+			try{
+				if(sensorCfgJson.has("name")) 
+					str = sensorCfgJson.getString("name");
+				else
+					throw new JSONException(";;;");
+				jObj.put("name", str);
+			}catch(JSONException e){System.out.println(">>> JSONError(makeJSON)" + e.toString()); throw new JSONException(">>> JSONError");
+			}catch(Exception e){ System.out.println(">>> no name key" + e.toString());}
+			
+			try{
+				if(sensorCfgJson.has("description")) 
+					str = sensorCfgJson.getString("description");
+				else
+					throw new JSONException(";;;");
+				jObj.put("description", str);
+			}catch(JSONException e){System.out.println(">>> JSONError(makeJSON)" + e.toString()); throw new JSONException(">>> JSONError");
+			}catch(Exception e){ System.out.println(">>> no description key" + e.toString());}
+			
+			
+			try{
+				if(sensorCfgJson.has("tags")) 
+					str = sensorCfgJson.getString("tags");
+				else
+					throw new JSONException(";;;");
+				jObj.put("tags", str);
+			}catch(JSONException e){System.out.println(">>> JSONError(makeJSON)" + e.toString()); throw new JSONException(">>> JSONError");
+			}catch(Exception e){ System.out.println(">>> no tags key" + e.toString());}
+			
+			try{
+				if(sensorCfgJson.has("encodingType")) 
+					str = sensorCfgJson.getString("encodingType");
+				else
+					throw new JSONException(";;;");
+				jObj.put("encodingType", str);
+			}catch(JSONException e){System.out.println(">>> JSONError(makeJSON)" + e.toString()); throw new JSONException(">>> JSONError");
+			}catch(Exception e){ System.out.println(">>> no encodingType key" + e.toString());}
+			
+			
+			
+			try{
+				if(sensorCfgJson.has("dataType")) 
+					str = sensorCfgJson.getString("dataType");
+				else
+					throw new JSONException(";;;");
+				jObj.put("dataType", str);
+			}catch(JSONException e){System.out.println(">>> JSONError(makeJSON)" + e.toString()); throw new JSONException(">>> JSONError");
+			}catch(Exception e){ System.out.println(">>> no dataType key" + e.toString());}
+			
+			try{
+				if(sensorCfgJson.has("dataUnit")) 
+					str = sensorCfgJson.getString("dataUnit");
+				else
+					throw new JSONException(";;;");
+				jObj.put("dataUnit", str);
+			}catch(JSONException e){System.out.println(">>> JSONError(makeJSON)" + e.toString()); throw new JSONException(">>> JSONError");
+			}catch(Exception e){ System.out.println(">>> no dataUnit key" + e.toString());}
+			
+		return jObj;
+	}
+	
+	public static JSONObject makeJsonForControlRegistration(CoTConfiguration devconf, JSONObject controlCfgJson) throws JSONException{
+		JSONObject jObj = new JSONObject();
+		String str = new String();
+			//From device.cfg or device.dat
+			try{
+				str = devconf.getConfiguration("writePasscode");
+				jObj.put("writePasscode", str);
+			}catch(JSONException e){System.out.println(">>> JSONError(makeJSON1)" + e.toString()); throw new JSONException(">>> JSONError");
+			}catch(Exception e){ System.out.println(">>> no writePasscode key" + e.toString());}
+		
+			try{
+				str = devconf.getData("deviceID");
+				jObj.put("deviceID", str);
+			}catch(JSONException e){System.out.println(">>> JSONError(makeJSON2)" + e.toString()); throw new JSONException(">>> JSONError");
+			}catch(Exception e){ System.out.println(">>> no deviceID key" + e.toString());}
+			
+			//From sensorcontrol.cfg
+			try{
+				if(controlCfgJson.has("name")) 
+					str = controlCfgJson.getString("name");
+				else
+					throw new JSONException(";;;");
+				jObj.put("name", str);
+			}catch(JSONException e){System.out.println(">>> JSONError(makeJSON3)" + e.toString()); throw new JSONException(">>> JSONError");
+			}catch(Exception e){ System.out.println(">>> no name key" + e.toString());}
+			
+			try{
+				if(controlCfgJson.has("description")) 
+					str = controlCfgJson.getString("description");
+				else
+					throw new JSONException(";;;");
+				jObj.put("description", str);
+			}catch(JSONException e){System.out.println(">>> JSONError(makeJSON4)" + e.toString()); throw new JSONException(">>> JSONError");
+			}catch(Exception e){ System.out.println(">>> no description key" + e.toString());}
+			
+			
+			try{
+				if(controlCfgJson.has("tags")) 
+					str = controlCfgJson.getString("tags");
+				else
+					throw new JSONException(";;;");
+				jObj.put("tags", str);
+			}catch(JSONException e){System.out.println(">>> JSONError(makeJSON5)" + e.toString()); throw new JSONException(">>> JSONError");
+			}catch(Exception e){ System.out.println(">>> no tags key" + e.toString());}
+			
+			try{
+				if(controlCfgJson.has("controlDeliveryMethod")) 
+					str = controlCfgJson.getString("controlDeliveryMethod");
+				else
+					throw new JSONException(";;;");
+				jObj.put("controlDeliveryMethod", str);
+			}catch(JSONException e){System.out.println(">>> JSONError(makeJSON6)" + e.toString()); throw new JSONException(">>> JSONError");
+			}catch(Exception e){ System.out.println(">>> no controlDeliveryMethod key" + e.toString());}
+			
+		return jObj;
+	}
+	
+	
+	
+	private Boolean existKey(JSONObject jo, String key){
+		if(jo.has(key)== true && jo.isNull(key) == false){
+			return true;
+		}else{
+			return false;
+		}	
+	}
+	
+	
+}

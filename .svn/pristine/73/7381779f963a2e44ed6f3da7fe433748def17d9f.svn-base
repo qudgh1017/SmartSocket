@@ -1,0 +1,13 @@
+{
+  "Control": [
+    {
+      "number":"1",
+      "name": "Relay9",
+      "description": "on/off Relay",
+      "tags": "Relay, control",
+      "controlDeliveryMethod":"MQTT://203.254.173.5?topic=CORelayTest&client=keti"
+    }
+  ]
+}
+
+

@@ -1,0 +1,7 @@
+package cotapi;
+
+import org.json.JSONObject;
+
+public interface ControlEvent {
+	public void ControlCommand(JSONObject commandJSON);	
+}

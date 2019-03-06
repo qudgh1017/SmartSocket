@@ -1,0 +1,54 @@
+package cotapi;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+public class CoTSensorDataJSON {
+	static JSONObject sensorDataJson = null;
+	
+	public static JSONObject putSensorData(String ID, String writePasscode, String data, String timestamp) throws JSONException{
+		sensorDataJson = new JSONObject(" {\"sensordataList\": []} ");
+		appendSensorData(ID, writePasscode, data, timestamp);
+		//System.out.println(slist.toString());	
+		return sensorDataJson;
+	}
+	
+	public static JSONObject appendSensorData(String ID, String writePasscode, String data, String timestamp) throws JSONException{
+		//IF NULL
+		if(sensorDataJson == null){
+			sensorDataJson = new JSONObject(" {\"sensordataList\": []} ");	
+		}
+		//
+		JSONObject dp = new JSONObject();
+		dp.put("data", data);
+		dp.put("timestamp", timestamp);
+		//APPEND DATA TO SPECIFIED ID
+		boolean found = false;
+		for(int i = 0; i< sensorDataJson.getJSONArray("sensordataList").length(); i++){
+			if(((JSONObject)sensorDataJson.getJSONArray("sensordataList").get(i)).get("sensorID").equals(ID)){
+				//System.out.println(jobj.toString(4));
+				((JSONObject)sensorDataJson.getJSONArray("sensordataList").get(i)).append("sensordata", dp);
+				found = true;
+				break;
+			}
+		}
+		//IF NOT FOUND the ID		
+		if(found == false){
+			JSONObject aJson = new JSONObject();
+			aJson.put("sensorID", ID);
+			aJson.put("writePasscode", writePasscode);
+			aJson.append("sensordata", dp);
+			sensorDataJson.append("sensordataList", aJson);
+		}
+		return sensorDataJson;
+	}
+	
+	public static JSONObject initSensorData() throws JSONException{
+		sensorDataJson = new JSONObject(" {\"sensordataList\": []} ");
+		return sensorDataJson;
+	}	
+	
+	public static JSONObject getSensorDataJSON() throws JSONException{
+		return sensorDataJson;
+	}
+}

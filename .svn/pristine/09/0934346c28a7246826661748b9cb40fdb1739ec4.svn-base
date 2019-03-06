@@ -1,0 +1,134 @@
+package cotapi;
+
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.MqttCallback;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
+import org.eclipse.paho.client.mqttv3.MqttSecurityException;
+import org.json.JSONObject;
+
+
+/**
+ * 
+ */
+public class CoTMqttClient implements MqttCallback {
+	private String mqttClientId = MqttClient.generateClientId();
+	private String mqttServerUrl = "";
+	private String mqttTopicName = "";
+	private MqttClient client;
+	private String mqttReceivedMessage = "";
+	
+	private ControlEvent controlEvent;
+	
+	/**
+	 *  생성자
+	 */
+	public CoTMqttClient(String mqttServerUrl, String mqttClientIDArg) {
+		this.mqttServerUrl = "tcp://" + mqttServerUrl + ":1883"; //ex)"tcp://203.254.173.5:1883"
+		try {
+			//TODO 원래의 MqttClient는 두번째 arg로 mqttClientID를 받음
+			client = new MqttClient(this.mqttServerUrl, this.mqttClientId);
+			System.out.println(">>>this.mqttClientId:" + this.mqttClientId);
+			
+			//client = new MqttClient(this.mqttServerUrl, mqttClientIDArg);
+			//System.out.println(">>>mqttClientIDArg:" + mqttClientIDArg);
+			
+			while(!client.isConnected()){
+				client.connect();				
+			}
+			System.out.println("[MQTT] Connected ..." + mqttServerUrl + "/" + this.mqttTopicName);
+		} catch (MqttException e) {
+			System.out.println("[MQTT] Connect error  ..." + mqttServerUrl);
+			e.printStackTrace();
+		}		    		
+	}
+	
+	public void subscribeToTopic(String topicname) {
+		try {
+			System.out.println("[MQTT] Subscrive... topic:" + topicname);
+			this.mqttTopicName = topicname;
+			client.subscribe(this.mqttTopicName);
+			client.setCallback(this);
+		} catch (MqttException e) {
+			System.out.println("[CoT MQTT Client] Subscribe Failed - " + topicname);
+			e.printStackTrace();
+		}
+	}
+	
+	public void publishMessageToTopic(String message, String topic) {
+		MqttMessage msg = new MqttMessage();
+		byte[] topicByteArray = message.getBytes();
+		msg.setPayload(topicByteArray);		
+		try {
+			//System.out.println("[CoT MQTT Client] Publish Message.. Message: " + message + ", Topic:" + topic);
+			client.publish(topic, msg);
+		} catch (MqttPersistenceException e) {
+			System.out.println("[CoT MQTT Client] Publish Failed - " + topic);
+			e.printStackTrace();
+		} catch (MqttException e) {
+			System.out.println("[CoT MQTT Client] Publish Failed - " + topic);
+			e.printStackTrace();
+		}
+	}
+	
+	public void connectionLost(Throwable cause) {
+		try {
+			while(!client.isConnected()){
+				client.connect();				
+			}
+			client.unsubscribe(this.mqttTopicName);
+			client.subscribe(this.mqttTopicName);
+		} catch (MqttSecurityException e) {
+			e.printStackTrace();
+		} catch (MqttException e) {
+			e.printStackTrace();
+		}
+		//System.out.println("[CoT MQTT Client]>>> Connected ... " + mqttServerUrl);
+	}
+	
+	/*
+	 *  MESSAGE ARRIVED
+	 */
+	@Override
+	public void messageArrived(String topic, MqttMessage message) throws Exception {
+		this.mqttReceivedMessage = byteArrayToString(message.getPayload());
+		//PRINT
+		System.out.println("[CoT MQTT Client] Received Message.. Message: " + this.mqttReceivedMessage + ", Topic: " + topic);	
+		JSONObject rxjson = new JSONObject(this.mqttReceivedMessage);
+		controlEvent.ControlCommand(rxjson);		
+	}
+	
+	public void registerControlEvent(ControlEvent event){
+		controlEvent = event;		
+	}
+	
+	public String getMqttMessage(){
+		return this.mqttReceivedMessage;
+	}
+	
+	@Override
+	public void deliveryComplete(IMqttDeliveryToken token) {
+		System.out.println("[CoT MQTT Client] Successfuly delivered ..");			
+	}
+	
+	public String byteArrayToString(byte[] byteArray)
+	{
+	    String toString = "";
+	    for(int i = 0; i < byteArray.length; i++)
+	    {
+	        toString += (char)byteArray[i];
+	    }
+	    return toString;    
+	}
+	
+	Boolean existKey(JSONObject jo, String key) {
+		if (jo.has(key) == true && jo.isNull(key) == false) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+		
+}//Class

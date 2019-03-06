@@ -1,0 +1,20 @@
+{
+    "address": "경기도 성남시 야탑동",
+    "mqttServerIP": "203.254.173.5",
+    "maxHeartbeatPeriod": 180,
+    "mqttCoTTopic": "CoTDeviceManagement",
+    "description": "SongDesktop,RegTo156GW",
+    "gatewayIP": "http://203.254.173.158:8080/CoT",
+    "deviceName": "songPC",
+    "writePasscode": "wr123",
+    "operationMode": "STATIC_GATEWAY_MODE",
+    "readPasscode": "rd123",
+    "appList": [{
+        "appName": "",
+        "runMethod": ""
+    }],
+    "pointOfAccess": "203.254.173.167",
+    "deviceUID": "kr.keti.cotlab.device.080",
+    "position": "CoT Lab",
+    "heartbeatErrorNotification": "SMS"
+}
